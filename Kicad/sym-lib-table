@@ -1,0 +1,7 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "BW16")(type "KiCad")(uri "${KIPRJMOD}/BW16.kicad_sym")(options "")(descr ""))
+  (lib (name "0_Ge2")(type "KiCad")(uri "${KIPRJMOD}/LibGe2/0_Ge2.kicad_sym")(options "")(descr ""))
+  (lib (name "0_SymbGamelGe2_v6")(type "KiCad")(uri "${KIPRJMOD}/LibGamelGe2_v6/0_SymbGamelGe2_v6.kicad_sym")(options "")(descr ""))
+  (lib (name "TCA9545APWR")(type "KiCad")(uri "${KIPRJMOD}/TCA9545APWR/TCA9545APWR.kicad_sym")(options "")(descr ""))
+)
