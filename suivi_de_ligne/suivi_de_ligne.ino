@@ -6,7 +6,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <WiFi.h>
-
+// Cca
 char* ssid = "cdf_crac";
 const char* password = "cracadmin";
 const char* wifiIP = "192.168.0.1";  // Adresse IP du serveur
@@ -17,8 +17,6 @@ const int socketPort = 5050;  // Port utilisé pour le socket principal
 
 WiFiClient wifiClient;    // Client pour tester la connexion WiFi (8080)
 WiFiClient socketClient;  // Client pour le vrai socket (5050)
-
-
 
 #define PWMG PA13
 #define SWITCHG PA15
@@ -42,9 +40,9 @@ VL53L0X_RangingMeasurementData_t measure;
 // Crée un objet pour l'ADS1015
 Adafruit_ADS1X15 ads;
 float erreur = 0, erreurP = 0;
-float commande = 0, kp = 3000, kd = 10000, ki = 0;
+float commande = 0, kp = 1.5, kd = 0.3, ki = 0;
 float mg = 0, md = 0;
-int vmax = 200;
+int vmax = 150;
 int suivi = 0;
 float cgmax = 0, cgmin = 100000, cdmax = 0, cdmin = 100000;
 float cg, cd;
@@ -53,12 +51,32 @@ float cg, cd;
 
 //Vl53l0x monCapteur[2];
 
+void faireFete()
+{
+  int n = 2000;
+  
+  while (1) {
+    digitalWrite(BRAS, 1);
+    delayMicroseconds(n);
+    digitalWrite(BRAS, 0);
+    delayMicroseconds(20000-n);
+    delay(250);  
+    if (n==2000) {
+      n = 1600;
+    } else {
+      n = 2000;
+    }
+  }
+}
+
 void read_tof() {
   for (int i = 0; i < nb_tof; i++) {
     monCapteur[i].performSingleRangingMeasurement(&measure);
     mesures[i] = measure.RangeMilliMeter;  // on range toutes les valeurs dans une liste
-    // Serial.println(mesures[i]);            //on print les deux au cas où y ait une merde
+    Serial.print(mesures[i]);            //on print les deux au cas où y ait une merde
+    Serial.print(" ");
   }
+  Serial.println("");
 }
 
 void init_tof() {
@@ -103,44 +121,44 @@ void etalonnage() {
 void suivi_de_ligne(void*) {
   unsigned long dernierTOF = 0;
   const unsigned long intervalleTOF = 100;  // 100 ms
+
   while (1) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+//    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     while (1) {
-      int16_t captDroit = ads.readADC_SingleEnded(0);   // Lire la valeur du canal A0
-      int16_t captGauche = ads.readADC_SingleEnded(1);  // Lire la valeur du canal A1
-
-      cg = (float)((captGauche-cgmin)/(cgmax-cgmin));
-      cd = (float)((captDroit-cdmin)/(cdmax-cdmin));
-
       unsigned long maintenant = millis();
       if (maintenant - dernierTOF >= intervalleTOF) {
         dernierTOF = maintenant;
         read_tof();  // lecture des distances TOF toutes les 100 ms
       }
+      int16_t captDroit = ads.readADC_SingleEnded(0);   // Lire la valeur du canal A0
+      int16_t captGauche = ads.readADC_SingleEnded(1);  // Lire la valeur du canal A1
 
-      erreur = (float)cg - cd;
-      commande = (float)(kp * erreur + kd * (erreur - erreurP));
-
+      // Serial.print(captGauche);
+      // Serial.print(" ");
+      // Serial.print(captDroit);
+      // Serial.println(" ");
 
       switch (suivi) {
-        lcd.print("CaptG: ");
-        lcd.println(captGauche);
-        lcd.print("CaptD: ");
-        lcd.println(captDroit);
         case 0:
           //delay(2000);
           suivi = 1;
           break;
 
         case 1:
+          erreur = (float)captGauche - (float)captDroit;
+          commande = (float)(kp * erreur + kd * (erreur - erreurP));
 
           mg = (float)(vmax + commande);
           md = (float)(vmax - commande);
 
           if (mg > vmax) mg = vmax;
           if (md > vmax) md = vmax;
-          if ((captGauche > 1100) & (captDroit > 1100)) suivi = 2;
-          if ((mesures[0] < 100) & (mesures[1] < 100)) suivi = 4;
+          if (mg < 0) mg = 0;
+          if (md < 0) md = 0;
+
+          if ((captGauche > 1000) && (captDroit > 1000)) suivi = 2;
+          if ((captGauche < 600) && (captDroit < 600)) suivi = 2;
+          if ((mesures[0] < 100) || (mesures[1] < 100)) suivi = 4;
           erreurP = erreur;
           break;
 
@@ -152,27 +170,34 @@ void suivi_de_ligne(void*) {
           digitalWrite(SWITCHG, HIGH);
           analogWrite(PWMG, mg);
           analogWrite(PWMD, md);
-          if ((mesures[0] < 100) & (mesures[1] < 100)) suivi = 4;
-          delay(350);
-          suivi = 3;
+          // if ((mesures[0] < 100) || (mesures[1] < 100)) suivi = 4;
+          // delay(350);
+          // suivi = 3;
+          if ((captGauche < 200) || (captDroit < 200)) suivi = 3;
           break;
         case 3:
           mg = 0;
           md = 0;
+          digitalWrite(SWITCHD, LOW);
+          digitalWrite(SWITCHG, HIGH);
+          analogWrite(PWMG, mg);
+          analogWrite(PWMD, md);
           lcd.setRGB(0, 255, 0);
+          lcd.setCursor(0, 0);
           lcd.print("C'est carreeee !");
+          faireFete();
           break;
         case 4:
           mg = 0;
           md = 0;
-          if ((mesures[0] > 100) & (mesures[1] > 100)) suivi = 1;
+          if ((mesures[0] > 100) && (mesures[1] > 100)) suivi = 1;
           break;
       }
       digitalWrite(SWITCHD, LOW);
       digitalWrite(SWITCHG, HIGH);
       analogWrite(PWMG, mg);
       analogWrite(PWMD, md);
-      vTaskDelay(pdMS_TO_TICKS(10));  // Pause de 10ms
+      vTaskDelay(pdMS_TO_TICKS(5));  // Pause de 1ms
     }
   }
 }
@@ -241,6 +266,7 @@ void setup() {
   pinMode(BRAS, OUTPUT);  // attache le servo au pin spécifié
   analogWrite(BRAS, 0);
   // Wire.begin();  // Initialise le bus I2C
+
   Serial.begin(115200);
 
   Wire.begin();
@@ -252,8 +278,8 @@ void setup() {
       ;
   }
   init_tof();
-  init_wifi();
-  init_socket();
+  // init_wifi();
+  // init_socket();
   lcd.begin(16, 2, false);
   lcd.setRGB(255, 0, 0);
   lcd.setCursor(0, 0);
@@ -261,7 +287,7 @@ void setup() {
   delay(500);
   lcd.clear();
   xTaskCreate(suivi_de_ligne, "Suivi", 4096, NULL, 1, &suivi_ligne);
-  xTaskCreate(read_socket, "Socket", 4096, NULL, 2, 0);
+  // xTaskCreate(read_socket, "Socket", 4096, NULL, 2, 0);
 }
 
 
