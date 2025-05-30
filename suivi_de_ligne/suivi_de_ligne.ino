@@ -40,7 +40,7 @@ VL53L0X_RangingMeasurementData_t measure;
 // Crée un objet pour l'ADS1015
 Adafruit_ADS1X15 ads;
 float erreur = 0, erreurP = 0;
-float commande = 0, kp = 1.5, kd = 0.4, ki = 0;
+float commande = 0, kp = 0.3, kd = 0.1, ki = 0;
 int mg = 0, md = 0;
 int vmax = 150;
 int suivi = 0;
@@ -215,8 +215,8 @@ void suivi_de_ligne(void*) {
       // }
       machineTof();
 
-      int16_t captDroit = ads.readADC_SingleEnded(0);   // Lire la valeur du canal A0
-      int16_t captGauche = ads.readADC_SingleEnded(1);  // Lire la valeur du canal A1
+      int16_t captDroit = ads.readADC_SingleEnded(1);   // Lire la valeur du canal A0
+      int16_t captGauche = ads.readADC_SingleEnded(0);  // Lire la valeur du canal A1
 
       // Serial.print(captGauche);
       // Serial.print(" ");
@@ -233,6 +233,7 @@ void suivi_de_ligne(void*) {
           if ((mesures[0] > 100) && (mesures[1] > 100)) {
             tempsDebut = millis();
             vTaskDelay(85000);
+            // vTaskDelay(1000);
             suivi = 1;
           }
           break;
@@ -250,11 +251,11 @@ void suivi_de_ligne(void*) {
           if (mg < -vmax/2) mg = -vmax/2;
           if (md < -vmax/2) md = -vmax/2;
 
-          if (((captGauche > 1000) && (captDroit > 1000)) || ((captGauche < 600) && (captDroit < 600))) {
+          if (((captGauche > 3200) && (captDroit > 3200)) || ((captGauche < 2000) && (captDroit < 2000))) {
             nbFin++;
             if (nbFin > 4) suivi = 2;
-            mg = 70;
-            md = 120;
+            mg = 100; //70;
+            md = 100; //120;
           } else {
             nbFin -= 2;
             if (nbFin<0) nbFin = 0;
@@ -265,8 +266,8 @@ void suivi_de_ligne(void*) {
 
         case 2:
           //delay(1000);
-          mg = 70;
-          md = 120;
+          mg = 0; //70;
+          md = 0; //120;
           // digitalWrite(SWITCHD, LOW);
           // digitalWrite(SWITCHG, HIGH);
           // analogWrite(PWMG, mg);
@@ -274,7 +275,7 @@ void suivi_de_ligne(void*) {
           // if ((mesures[0] < 100) || (mesures[1] < 100)) suivi = 4;
           // delay(350);
           // suivi = 3;
-          if ((captGauche < 200) || (captDroit < 200)) {
+          if ((captGauche < 600) || (captDroit < 600)) {
             md = 0;
             mg = 0;
             suivi = 3;
