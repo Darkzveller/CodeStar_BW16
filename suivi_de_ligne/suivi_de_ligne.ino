@@ -289,7 +289,8 @@ void suivi_de_ligne(void*) {
           analogWrite(PWMD, md);
           lcd.setRGB(0, 255, 0);
           lcd.setCursor(0, 0);
-          lcd.print("C'est carreeee !");
+          // lcd.print("C'est carreeee !");
+          lcd.print("Score = 30 pts");
           faireFete();
           break;
         case 4:
