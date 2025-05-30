@@ -6,6 +6,12 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <WiFi.h>
+#include "DFRobotDFPlayerMini.h"
+
+#define FPSerial Serial1
+
+DFRobotDFPlayerMini myDFPlayer;
+
 // Cca
 char* ssid = "cdf_crac";
 const char* password = "cracadmin";
@@ -40,9 +46,9 @@ VL53L0X_RangingMeasurementData_t measure;
 // Crée un objet pour l'ADS1015
 Adafruit_ADS1X15 ads;
 float erreur = 0, erreurP = 0;
-float commande = 0, kp = 0.3, kd = 0.1, ki = 0;
+float commande = 0, kp = 0.25, kd = 0.15, ki = 0;
 int mg = 0, md = 0;
-int vmax = 150;
+int vmax = 180;
 int suivi = 0;
 float cgmax = 0, cgmin = 100000, cdmax = 0, cdmin = 100000;
 float cg, cd;
@@ -234,6 +240,7 @@ void suivi_de_ligne(void*) {
             tempsDebut = millis();
             vTaskDelay(85000);
             // vTaskDelay(1000);
+            myDFPlayer.play(1);  //Play the first mp3
             suivi = 1;
           }
           break;
@@ -364,6 +371,7 @@ void read_socket(void*) {
 
 void setup() {
   Serial.begin(115200);
+  FPSerial.begin(9600);
   pinMode(SWITCHG, OUTPUT);
   pinMode(SWITCHD, OUTPUT);
   pinMode(PWMD, OUTPUT);
@@ -375,6 +383,9 @@ void setup() {
   // Wire.begin();  // Initialise le bus I2C
 
   Serial.begin(115200);
+
+  myDFPlayer.begin(FPSerial, /*isACK = */true, /*doReset = */true);
+  myDFPlayer.volume(30);  //Set volume value. From 0 to 30
 
   Wire.begin();
   Wire.setClock(100000);
